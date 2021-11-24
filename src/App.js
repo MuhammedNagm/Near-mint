@@ -4,7 +4,6 @@ import PropTypes from "prop-types";
 import Big from "big.js";
 import Form from "./components/Form";
 import SignIn from "./components/SignIn";
-import Messages from "./components/Messages";
 
 const SUGGESTED_DONATION = "0";
 const BOATLOAD_OF_GAS = Big(3)
@@ -12,11 +11,11 @@ const BOATLOAD_OF_GAS = Big(3)
   .toFixed();
 
 const App = ({ contract, currentUser, nearConfig, wallet }) => {
-  const [messages, setMessages] = useState([]);
+  const [setMessages] = useState([]);
 
   useEffect(() => {
     // TODO: don't just fetch once; subscribe!
-    contract.getMessages().then(setMessages);
+    // contract.getMessages().then(setMessages);
   }, []);
 
   const onSubmit = (e) => {
@@ -29,35 +28,35 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
     // TODO: optimistically update page with new message,
     // update blockchain data in background
     // add uuid to each message, so we know which one is already known
-    if (messages.some((m) => m.sender === currentUser.accountId)) {
-      alert("You signed before");
-    } else {
-      addMessage(message, donation);
-    }
-  };
-
-  const addMessage = (message, donation) => {
     contract
-      .addMessage(
-        { text: message.value },
+      .nft_mint(
+        {
+          token_id: parseInt(Math.random() * 1000).toString(),
+          receiver_id: currentUser.accountId,
+          metadata: {
+            title: message.value,
+            description: message.value,
+            media: NFTLINK.value,
+            copies: 5,
+          },
+        },
         BOATLOAD_OF_GAS,
-        Big(donation.value || "0")
+        Big("0.5")
           .times(10 ** 24)
           .toFixed()
       )
-      .then(() => {
-        contract.getMessages().then((messages) => {
-          setMessages(messages);
-          message.value = "";
-          donation.value = SUGGESTED_DONATION;
-          fieldset.disabled = false;
-          message.focus();
-        });
+      .then((res) => {
+        console.log(res);
+        message.value = "";
+        NFTLINK.value = "";
+        donation.value = SUGGESTED_DONATION;
+        fieldset.disabled = false;
+        message.focus();
       });
   };
 
   const signIn = () => {
-    wallet.requestSignIn(nearConfig.contractName, "NEAR Guest Book");
+    wallet.requestSignIn(nearConfig.contractName, "NEAR MINT");
   };
 
   const signOut = () => {
@@ -68,7 +67,7 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
   return (
     <main>
       <header>
-        <h1>NEAR Guest Book</h1>
+        <h1>NEAR MINT</h1>
         {currentUser ? (
           <button onClick={signOut}>Log out</button>
         ) : (
@@ -80,15 +79,13 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
       ) : (
         <SignIn />
       )}
-      {!!currentUser && !!messages.length && <Messages messages={messages} />}
     </main>
   );
 };
 
 App.propTypes = {
   contract: PropTypes.shape({
-    addMessage: PropTypes.func.isRequired,
-    getMessages: PropTypes.func.isRequired,
+    nft_mint: PropTypes.func.isRequired,
   }).isRequired,
   currentUser: PropTypes.shape({
     accountId: PropTypes.string.isRequired,
